@@ -2,6 +2,7 @@
     // Esse é o valida.php
     include ("../config.php");
     require_once(DBAPI);
+    include HEADER_TEMPLATE;
     // Verifica se houve POST e se o usuário ou a senha é(são) vazio(s)
     if (!empty($_POST) AND (empty($_POST['login']) OR empty($_POST['senha']))) {
         header("Location:" . BASEURL . "index.php");
@@ -20,7 +21,7 @@
         if(!empty($usuario) && !empty($senha)){
             // Pegando a senha digitada no form e criptografando ela para poder comparar
             // a função de criptografia FOI MOVIDA para o arquivo database.php (DBAPI)
-            $senha = $_POST['senha'];
+            $senha = criptografia($_POST['senha']);
 
             // Validação do usuário/senha digitados
             $sql = "SELECT id, nome, user, password, nivel FROM usuarios WHERE (user = '". $usuario ."') AND (password = '" . $senha ."') LIMIT 1";
@@ -33,7 +34,6 @@
                 $user = $dados['user'];
                 $nivel = $dados['nivel'];
                 $password = $dados['password'];
-                var_dump($user);
                 // Verifica se $user não está vazio
                 if (!empty($user)){
                     if (!isset($_SESSION)) session_start();
@@ -44,7 +44,6 @@
                     $_SESSION['user'] = $user;
                     $_SESSION['nivel'] = $nivel;
                     echo "<b>";
-                    var_dump($user);
                     echo "</b>";
                 } else {
                     // Mensagem de erro quando os dados são inválidos e/ou o usuário não foi encontrado

@@ -52,11 +52,13 @@ include HEADER_TEMPLATE;
 
         <div class="form-group">
             <label for="birthdate">Data de Nascimento</label>
-            <input type="text" class="form-control" id="birthdate" name="enfermeiro['birthdate']" required
-                inputmode="numeric" minlength="10" maxlength="10" pattern="\d{2}/\d{2}/\d{4}"
-                title="Informe a data completa no formato dd/mm/aaaa"
-                placeholder="dd/mm/aaaa"
-                value="<?php echo !empty($enfermeiro['birthdate']) ? formatData($enfermeiro['birthdate'], 'd/m/Y') : ''; ?>">
+            <input type="date" class="form-control" id="birthdate"
+                name="enfermeiro['birthdate']" required
+                min="1900-01-01"
+                max="<?php echo date('Y-m-d'); ?>"
+                value="<?php echo !empty($enfermeiro['birthdate'])
+                            ? date('Y-m-d', strtotime($enfermeiro['birthdate']))
+                            : ''; ?>">
         </div>
 
         <div class="form-group">
@@ -130,18 +132,6 @@ include HEADER_TEMPLATE;
             return d;
         }
 
-        function maskDate(v) {
-            var d = v.replace(/\D/g, '').slice(0, 8);
-
-            if (d.length > 4)
-                return d.slice(0, 2) + '/' + d.slice(2, 4) + '/' + d.slice(4);
-
-            if (d.length > 2)
-                return d.slice(0, 2) + '/' + d.slice(2);
-
-            return d;
-        }
-
         var cep = document.getElementById('cep');
         var coren = document.getElementById('coren');
         var phone = document.getElementById('phone');
@@ -151,43 +141,30 @@ include HEADER_TEMPLATE;
         function validateDate() {
             birthdate.setCustomValidity('');
 
-            var v = birthdate.value;
+            if (!birthdate.value) return;
 
-            if (v.length !== 10) return;
-
-            var p = v.split('/');
-            var day = parseInt(p[0], 10);
-            var month = parseInt(p[1], 10);
-            var year = parseInt(p[2], 10);
-
-            var dt = new Date(year, month - 1, day);
-
-            if (
-                dt.getFullYear() !== year ||
-                dt.getMonth() !== month - 1 ||
-                dt.getDate() !== day
-            ) {
-                birthdate.setCustomValidity('Data inválida. Confira o dia e o mês.');
-                return;
-            }
-
-            if (year < 1900) {
-                birthdate.setCustomValidity('O ano deve ser 1900 ou posterior.');
-                return;
-            }
-
+            var selectedDate = new Date(birthdate.value + 'T00:00:00');
             var today = new Date();
+
             today.setHours(0, 0, 0, 0);
 
-            if (dt > today) {
-                birthdate.setCustomValidity('A data de nascimento não pode ser futura.');
+            if (selectedDate.getFullYear() < 1900) {
+                birthdate.setCustomValidity(
+                    'O ano deve ser 1900 ou posterior.'
+                );
+                return;
+            }
+
+            if (selectedDate > today) {
+                birthdate.setCustomValidity(
+                    'A data de nascimento não pode ser futura.'
+                );
             }
         }
 
         // ---- Inicialização dos campos ----
         cep.value = maskCep(cep.value);
         phone.value = maskPhone(phone.value);
-        validateDate();
 
         // ---- CEP ----
         cep.addEventListener('input', function() {
@@ -245,20 +222,16 @@ include HEADER_TEMPLATE;
                 coren.value = coren.value.replace(/\D/g, '').slice(0, 7);
                 phone.value = maskPhone(phone.value);
 
-                validateDate();
+                birthdate.setCustomValidity('');
             }, 0);
         });
 
         // ---- Preparar dados antes do envio ----
         form.addEventListener('submit', function() {
+            validateDate();
+
             cep.value = cep.value.replace(/\D/g, '');
             phone.value = phone.value.replace(/\D/g, '');
-
-            var p = birthdate.value.split('/');
-
-            if (p.length === 3) {
-                birthdate.value = p[2] + '-' + p[1] + '-' + p[0];
-            }
         });
 
     });

@@ -8,6 +8,8 @@ if (session_status() === PHP_SESSION_NONE) {
 include('../config.php');
 include(DBAPI);
 
+
+
 $enfermeiros = null;
 $enfermeiro = null;
 
@@ -44,15 +46,61 @@ function cep($cep)
 }
 
 /**
+ * Filtragem de Enfermeiros
+ */
+function filter($table, $where)
+{
+    $database = open_database();
+
+    $found = null;
+
+    try {
+        $sql = "SELECT * FROM " . $table . " WHERE " . $where;
+
+        $result = $database->query($sql);
+
+        if ($result) {
+            $found = $result->fetch_all(MYSQLI_ASSOC);
+        }
+
+    } catch (Exception $e) {
+
+        $_SESSION['message'] = "Erro ao realizar a pesquisa: "
+            . $e->getMessage();
+
+        $_SESSION['type'] = "danger";
+    }
+
+    close_database($database);
+
+    return $found;
+}
+
+/**
  *  Listagem de Clientes
+ */
+/**
+ * Listagem e Pesquisa de Enfermeiros
  */
 function index()
 {
-	global $enfermeiros;
-	$enfermeiros = find_all("enfermeiros");
-	//find_all e find é a mesma coisa, resulta na mesma coisa
-}
+    global $enfermeiros;
 
+    if (!empty($_POST['enfermeiros'])) {
+
+        $pesquisa = addslashes($_POST['enfermeiros']);
+
+        $enfermeiros = filter(
+            "enfermeiros",
+            "nome LIKE '%" . $pesquisa . "%'"
+        );
+
+    } else {
+
+        $enfermeiros = find_all("enfermeiros");
+
+    }
+}
 /**
  *  Visualização de um Cliente
  */

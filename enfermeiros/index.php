@@ -16,6 +16,22 @@ include HEADER_TEMPLATE;
     </div>
 </header>
 
+<form action="index.php" method="post">
+    <input
+        type="text"
+        name="enfermeiros"
+        placeholder="Pesquisar enfermeiro pelo nome..."
+        class="form-control">
+
+    <button type="submit" class="btn btn-primary">
+        Pesquisar
+    </button>
+
+    <a href="index.php" class="btn btn-secondary">
+        Limpar
+    </a>
+</form>
+
 <?php if (!empty($_SESSION['message'])): ?>
     <div class="alert alert-<?php echo $_SESSION['type']; ?> alert-dismissible" role="alert">
         <?php echo $_SESSION['message']; ?>

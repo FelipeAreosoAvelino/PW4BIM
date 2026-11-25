@@ -4,7 +4,7 @@ add();
 include HEADER_TEMPLATE;
 ?>
 
-<h1 style="text-align: center;">Novo Enfermeiro</h1>
+<h1 style="text-align: center;">Novo cliente</h1>
 
 <?php // Mostra o erro de upload (add() nao redireciona quando a foto e invalida) ?>
 <?php if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_SESSION['message'])): ?>
@@ -19,7 +19,7 @@ include HEADER_TEMPLATE;
         <!-- area de campos do form -->
         <div class="form-group">
             <label for="name">Nome completo</label>
-            <input type="text" class="form-control" id="name" name="customer['name']" required
+            <input type="text" class="form-control" id="name" name="customer['nome']" required
                 minlength="3" maxlength="100"
                 placeholder="Ex: Ana Maria Santos">
         </div>
@@ -30,15 +30,6 @@ include HEADER_TEMPLATE;
                 inputmode="numeric" minlength="9" maxlength="9" pattern="\d{5}-\d{3}"
                 title="Informe o CEP completo, com 8 números (ex: 12345-678)"
                 placeholder="Ex: 12345-678">
-        </div>
-
-        <div class="form-group">
-            <label for="coren">COREN</label>
-            <input type="text" class="form-control" id="coren" name="customer['coren']" required
-                minlength="4" maxlength="20" autocapitalize="characters" spellcheck="false"
-                pattern="\d{4,7}|COREN-(AC|AL|AP|AM|BA|CE|DF|ES|GO|MA|MT|MS|MG|PA|PB|PR|PE|PI|RJ|RN|RS|RO|RR|SC|SP|SE|TO)-\d{4,7}(-(ENF|TEC|AUX|PAR|TE|AE|P))?"
-                title="Informe só o número (4 a 7 dígitos) ou o registro completo, ex: COREN-SP-123456-ENF"
-                placeholder="Ex: 123456 ou COREN-SP-123456-ENF">
         </div>
 
         <div class="form-group">

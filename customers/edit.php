@@ -4,7 +4,7 @@ edit();
 include HEADER_TEMPLATE;
 ?>
 
-<h1 style="text-align: center;" class="titulo-modal">Atualizar Enfermeiro</h1>
+<h1 style="text-align: center;" class="titulo-modal">Atualizar Cliente</h1>
 
 <?php // Mostra o erro de upload (edit() nao redireciona quando a foto e invalida) ?>
 <?php if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_SESSION['message'])): ?>
@@ -21,7 +21,7 @@ include HEADER_TEMPLATE;
             <label for="name">Nome completo</label>
             <input type="text" class="form-control" id="name" name="customer['name']" required
                 minlength="3" maxlength="100"
-                value="<?php echo $customer['name']; ?>">
+                value="<?php echo $customer['nome']; ?>">
         </div>
 
         <div class="form-group">
@@ -31,16 +31,7 @@ include HEADER_TEMPLATE;
                 title="Informe o CEP completo, com 8 números (ex: 12345-678)"
                 value="<?php echo $customer['cep']; ?>">
         </div>
-
-        <div class="form-group">
-            <label for="coren">COREN</label>
-            <input type="text" class="form-control" id="coren" name="customer['coren']" required
-                minlength="4" maxlength="20" autocapitalize="characters" spellcheck="false"
-                pattern="\d{4,7}|COREN-(AC|AL|AP|AM|BA|CE|DF|ES|GO|MA|MT|MS|MG|PA|PB|PR|PE|PI|RJ|RN|RS|RO|RR|SC|SP|SE|TO)-\d{4,7}(-(ENF|TEC|AUX|PAR|TE|AE|P))?"
-                title="Informe só o número (4 a 7 dígitos) ou o registro completo, ex: COREN-SP-123456-ENF"
-                value="<?php echo $customer['coren']; ?>">
-        </div>
-
+        
         <div class="form-group">
             <label for="phone">Telefone</label>
             <input type="text" class="form-control" id="phone" name="customer['phone']" required

@@ -8,6 +8,38 @@ $usuario = null;
 $usuarios = null;
 
 /**
+ * Filtragem de registros
+ */
+function filter($table, $where)
+{
+    global $connection;
+
+    $database = open_database();
+
+    $found = null;
+
+    try {
+        $sql = "SELECT * FROM " . $table . " WHERE " . $where;
+
+        $result = $database->query($sql);
+
+        if ($result) {
+            $found = $result->fetch_all(MYSQLI_ASSOC);
+        }
+
+    } catch (Exception $e) {
+        $_SESSION['message'] = "Erro ao filtrar registros: "
+            . $e->getMessage();
+
+        $_SESSION['type'] = "danger";
+    }
+
+    close_database($database);
+
+    return $found;
+}
+
+/**
  * Formatação de datas
  */
 function formatadata($data, $formato)
