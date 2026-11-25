@@ -1,6 +1,6 @@
 <?php
     //esse é o delete.php
-    require_once("functions.php");
+    require_once("function.php");
 
     if (isset($_GET['id'])){
         try {

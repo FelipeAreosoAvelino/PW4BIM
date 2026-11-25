@@ -7,10 +7,6 @@ $mysqli->report_mode = MYSQLI_REPORT_STRICT | MYSQLI_REPORT_ERROR;
 /**
  * Criptografia de senhas
  */
-function criptografia($senha)
-{
-    return password_hash($senha, PASSWORD_DEFAULT);
-}
 
 
 function open_database()

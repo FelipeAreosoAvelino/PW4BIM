@@ -1,6 +1,6 @@
 <?php
     //esse é o edit.php
-    include("functions.php");
+    include("function.php");
     edit();
     include(HEADER_TEMPLATE);
 ?>

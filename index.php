@@ -27,7 +27,7 @@ try {
         </a>
 
 
-        <a href="customers/add.php" class="action-card">
+        <a href="enfermeiros/add.php" class="action-card">
             <div class="row">
                 <div class="col-xs-12 text-center">
                     <i class="fa fa-user-plus fa-5x"></i>
@@ -48,7 +48,7 @@ try {
                 </div>
             </div>
         </a>
-        <?php if (isset($_SESSION['nivel']) && $_SESSION['nivel'] === 'adm'): ?>
+        <?php if (isset($_SESSION['nivel']) && $_SESSION['nivel'] === 'admin'): ?>
             <a href="usuarios/add.php" class="action-card">
                 <div class="row">
                     <div class="col-xs-12 text-center">

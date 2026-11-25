@@ -1,6 +1,6 @@
 <?php
 //esse é o index.php
-require("functions.php");
+require("function.php");
 index();
 ?>
 

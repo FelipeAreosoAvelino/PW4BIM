@@ -1,9 +1,9 @@
 <?php
     //esse é o view.php
-    require_once('functions.php');
+    require_once('function.php');
     if (!isset($_SESSION)) session_start();
     if (isset($_SESSION['user'])){ // Verifica se tem um usuário logado
-        if ($_SESSION['user'] != "admin") { // Verifica se o usuário é admin
+        if ($_SESSION['nivel'] != "admin") { // Verifica se o usuário é admin
             $_SESSION['message'] = "Você precisa ser administrador para acessar esse recurso!";
             $_SESSION['type'] = "danger";
             header("Location:" . BASEURL . "index.php");

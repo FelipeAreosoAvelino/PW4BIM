@@ -1,3 +1,9 @@
+<?php
+// Evita erro caso a sessão já tenha sido iniciada em outro lugar antes do include
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+?>
 <!DOCTYPE html>
 <html>
 
@@ -8,7 +14,6 @@
     <meta name="description" content="Gestão de enfermeiros, cadastro de enfermeiros, cadastro de clientes, cadastro de usuários">
     <meta name="Keywords" content="HTML, CSS, PHP, bootstrap, enfermeiros">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-
     <link rel="icon" href="<?php echo BASEURL; ?>lf_icon.ico" type="image/x-icon">
     <link rel="stylesheet" href="<?php echo BASEURL; ?>css/bootstrap/bootstrap.min.css">
 
