@@ -45,7 +45,7 @@ VALUES ('Emerson Fagundes', 032, 12345680, 15998760925, 'foto_6b0647237780f8.956
 
 
 INSERT INTO `customers` (`nome`, `birthdate`, `cep`, `phone`, `foto`) 
-VALUES ('Emerson Fagundes', , 10-10-2000,12345678, 15998760925, 'foto_6b0647237780f8.95613248.png');
+VALUES ('Emerson Fagundes', '2000-10-10', 12345680, 15998760925, 'foto_6b0647237780f8.95613248.png');
 
 
 insert into `usuarios` (`nome`, `user`, `password`, `foto`, `nivel`) 
