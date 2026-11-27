@@ -1,18 +1,16 @@
-
 <?php
-include "function.php";
+require_once("function.php"); // já exige login
 add();
 include HEADER_TEMPLATE;
 ?>
 
 <h1 style="text-align: center;">Novo Enfermeiro</h1>
 
-<?php // Mostra o erro de upload ?>
-<?php if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_SESSION['message'])): ?>
-    <div class="alert alert-<?php echo $_SESSION['type']; ?>" role="alert">
-        <?php echo $_SESSION['message']; ?>
+<?php if (!empty($_SESSION['message'])): ?>
+    <div class="alert alert-<?php echo e($_SESSION['type'] ?? 'info'); ?>" role="alert">
+        <?php echo e($_SESSION['message']); ?>
     </div>
-    <?php unset($_SESSION['message'], $_SESSION['type']); ?>
+    <?php clear_messages(); ?>
 <?php endif; ?>
 
 <div class="form-scroll">
@@ -21,47 +19,52 @@ include HEADER_TEMPLATE;
         <div class="form-group">
             <label for="name">Nome completo</label>
             <input type="text" class="form-control" id="name"
-                name="enfermeiro['nome']" required
+                name="enfermeiro[nome]" required
                 minlength="3" maxlength="100"
+                value="<?php echo e($enfermeiro['nome'] ?? ''); ?>"
                 placeholder="Ex: Ana Maria Santos">
         </div>
 
         <div class="form-group">
             <label for="cep">CEP</label>
             <input type="text" class="form-control" id="cep"
-                name="enfermeiro['cep']" required
+                name="enfermeiro[cep]" required
                 inputmode="numeric" minlength="9" maxlength="9"
                 pattern="\d{5}-\d{3}"
                 title="Informe o CEP completo, com 8 números (ex: 12345-678)"
+                value="<?php echo e($enfermeiro['cep'] ?? ''); ?>"
                 placeholder="Ex: 12345-678">
         </div>
 
         <div class="form-group">
             <label for="coren">COREN</label>
             <input type="text" class="form-control" id="coren"
-                name="enfermeiro['coren']" required
+                name="enfermeiro[coren]" required
                 inputmode="numeric" minlength="4" maxlength="7"
                 pattern="[0-9]{4,7}"
                 title="Informe de 4 a 7 números."
+                value="<?php echo e($enfermeiro['coren'] ?? ''); ?>"
                 placeholder="Ex: 123456">
         </div>
 
         <div class="form-group">
             <label for="phone">Telefone</label>
             <input type="text" class="form-control" id="phone"
-                name="enfermeiro['phone']" required
+                name="enfermeiro[phone]" required
                 inputmode="tel" minlength="14" maxlength="15"
                 pattern="\(\d{2}\) \d{4,5}-\d{4}"
                 title="Informe o telefone com DDD, com 10 ou 11 números (ex: (11) 91234-5678)"
+                value="<?php echo e($enfermeiro['phone'] ?? ''); ?>"
                 placeholder="Ex: (11) 91234-5678">
         </div>
 
         <div class="form-group">
             <label for="birthdate">Data de Nascimento</label>
             <input type="date" class="form-control" id="birthdate"
-                name="enfermeiro['birthdate']" required
+                name="enfermeiro[birthdate]" required
                 min="1900-01-01"
-                max="<?php echo date('Y-m-d'); ?>">
+                max="<?php echo date('Y-m-d'); ?>"
+                value="<?php echo e($enfermeiro['birthdate'] ?? ''); ?>">
         </div>
 
         <div class="form-group">
@@ -160,6 +163,10 @@ document.addEventListener('DOMContentLoaded', function() {
             );
         }
     }
+
+    // ---- Reaplica máscaras se o formulário voltou com erro ----
+    cep.value = maskCep(cep.value);
+    phone.value = maskPhone(phone.value);
 
     // ---- CEP ----
     cep.addEventListener('input', function() {

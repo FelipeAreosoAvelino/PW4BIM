@@ -1,59 +1,57 @@
 <?php
-include "function.php";
+require_once("function.php"); // já exige login
 edit();
 include HEADER_TEMPLATE;
 ?>
 
 <h1 style="text-align: center;" class="titulo-modal">Atualizar Enfermeiro</h1>
 
-<?php // Mostra o erro de upload 
-?>
-<?php if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_SESSION['message'])): ?>
-    <div class="alert alert-<?php echo $_SESSION['type']; ?>" role="alert">
-        <?php echo $_SESSION['message']; ?>
+<?php if (!empty($_SESSION['message'])): ?>
+    <div class="alert alert-<?php echo e($_SESSION['type'] ?? 'info'); ?>" role="alert">
+        <?php echo e($_SESSION['message']); ?>
     </div>
-    <?php unset($_SESSION['message'], $_SESSION['type']); ?>
+    <?php clear_messages(); ?>
 <?php endif; ?>
 
 <div class="form-scroll">
-    <form action="edit.php?id=<?= $enfermeiro['id']; ?>" method="post" enctype="multipart/form-data" class="form-card">
+    <form action="edit.php?id=<?php echo (int) $enfermeiro['id']; ?>" method="post" enctype="multipart/form-data" class="form-card">
 
         <div class="form-group">
             <label for="name">Nome completo</label>
-            <input type="text" class="form-control" id="name" name="enfermeiro['nome']" required
+            <input type="text" class="form-control" id="name" name="enfermeiro[nome]" required
                 minlength="3" maxlength="100"
-                value="<?php echo $enfermeiro['nome']; ?>">
+                value="<?php echo e($enfermeiro['nome']); ?>">
         </div>
 
         <div class="form-group">
             <label for="cep">CEP</label>
-            <input type="text" class="form-control" id="cep" name="enfermeiro['cep']" required
+            <input type="text" class="form-control" id="cep" name="enfermeiro[cep]" required
                 inputmode="numeric" minlength="9" maxlength="9" pattern="\d{5}-\d{3}"
                 title="Informe o CEP completo, com 8 números (ex: 12345-678)"
-                value="<?php echo $enfermeiro['cep']; ?>">
+                value="<?php echo e($enfermeiro['cep']); ?>">
         </div>
 
         <div class="form-group">
             <label for="coren">COREN</label>
-            <input type="text" class="form-control" id="coren" name="enfermeiro['coren']" required
+            <input type="text" class="form-control" id="coren" name="enfermeiro[coren]" required
                 inputmode="numeric" minlength="4" maxlength="7" pattern="[0-9]{4,7}"
                 title="Informe de 4 a 7 números."
-                value="<?php echo $enfermeiro['coren']; ?>">
+                value="<?php echo e($enfermeiro['coren']); ?>">
         </div>
 
         <div class="form-group">
             <label for="phone">Telefone</label>
-            <input type="text" class="form-control" id="phone" name="enfermeiro['phone']" required
+            <input type="text" class="form-control" id="phone" name="enfermeiro[phone]" required
                 inputmode="tel" minlength="14" maxlength="15"
                 pattern="\(\d{2}\) \d{4,5}-\d{4}"
                 title="Informe o telefone com DDD."
-                value="<?php echo $enfermeiro['phone']; ?>">
+                value="<?php echo e($enfermeiro['phone']); ?>">
         </div>
 
         <div class="form-group">
             <label for="birthdate">Data de Nascimento</label>
             <input type="date" class="form-control" id="birthdate"
-                name="enfermeiro['birthdate']" required
+                name="enfermeiro[birthdate]" required
                 min="1900-01-01"
                 max="<?php echo date('Y-m-d'); ?>"
                 value="<?php echo !empty($enfermeiro['birthdate'])
@@ -78,7 +76,7 @@ include HEADER_TEMPLATE;
             <label>Foto Atual</label>
             <div class="photo-preview" id="foto-preview">
                 <?php if (!empty($enfermeiro['foto'])): ?>
-                    <img src="<?php echo IMG_URL . $enfermeiro['foto']; ?>" alt="Foto atual">
+                    <img src="<?php echo e(IMG_URL . $enfermeiro['foto']); ?>" alt="Foto atual">
                 <?php else: ?>
                     <i class="fa-regular fa-image"></i>
                     <span>Sem Imagem</span>
@@ -184,10 +182,7 @@ include HEADER_TEMPLATE;
         });
 
         // ---- Data de nascimento ----
-        birthdate.addEventListener('input', function() {
-            birthdate.value = maskDate(birthdate.value);
-            validateDate();
-        });
+        birthdate.addEventListener('change', validateDate);
 
         // ---- Pré-visualização da nova foto ----
         var input = document.getElementById('foto');

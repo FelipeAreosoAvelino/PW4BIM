@@ -1,8 +1,6 @@
 <?php
-// Evita erro caso a sessão já tenha sido iniciada em outro lugar antes do include
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+// Sessão, e(), is_admin() etc.
+require_once __DIR__ . '/auth.php';
 ?>
 <!DOCTYPE html>
 <html>
@@ -14,8 +12,11 @@ if (session_status() === PHP_SESSION_NONE) {
     <meta name="description" content="Gestão de enfermeiros, cadastro de enfermeiros, cadastro de clientes, cadastro de usuários">
     <meta name="Keywords" content="HTML, CSS, PHP, bootstrap, enfermeiros">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+
     <link rel="icon" href="<?php echo BASEURL; ?>lf_icon.ico" type="image/x-icon">
     <link rel="stylesheet" href="<?php echo BASEURL; ?>css/bootstrap/bootstrap.min.css">
+    <link rel="stylesheet" href="<?php echo BASEURL; ?>css/style.css">
+    <link rel="stylesheet" href="<?php echo BASEURL; ?>css/awesome/all.min.css">
 
     <style>
         body {
@@ -73,11 +74,13 @@ if (session_status() === PHP_SESSION_NONE) {
         .topbar-end {
             display: flex;
             align-items: center;
-            gap: 1.25rem;
+            flex: 1;
         }
 
         .navbar-nav {
             width: 100%;
+            display: flex;
+            align-items: center;
             gap: .5rem;
         }
 
@@ -141,9 +144,9 @@ if (session_status() === PHP_SESSION_NONE) {
             color: var(--white);
         }
 
-        /* LOGIN E LOGOUT */
+        /* LOGIN, CADASTRO E LOGOUT */
         .nav-auth-item {
-            margin-left: auto;
+            margin-left: 0;
         }
 
         .nav-auth {
@@ -151,12 +154,32 @@ if (session_status() === PHP_SESSION_NONE) {
             font-size: 1.3rem;
             font-weight: 650;
             transition: color .1s ease;
-            margin-left: auto;
         }
 
         .nav-auth:hover,
         .nav-auth:focus {
             color: var(--teal-light) !important;
+        }
+
+        /* POSICIONAMENTO NO DESKTOP */
+        @media (min-width: 992px) {
+
+            /* Mantém os menus principais à esquerda */
+            .navbar-nav {
+                display: flex;
+                align-items: center;
+                width: 100%;
+            }
+
+            /* Empurra o primeiro item de autenticação para a direita */
+            .nav-auth-start {
+                margin-left: auto !important;
+            }
+
+            /* Espaçamento entre Cadastrar e Login */
+            .nav-auth-item+.nav-auth-item {
+                margin-left: .75rem;
+            }
         }
 
         /* BOTÃO RESPONSIVO */
@@ -166,6 +189,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
         /* RESPONSIVIDADE */
         @media (max-width: 991.98px) {
+
             .topbar {
                 padding: 0 1rem;
             }
@@ -182,20 +206,22 @@ if (session_status() === PHP_SESSION_NONE) {
             }
 
             .topbar-end {
-                gap: .75rem;
+                display: block;
             }
 
             .navbar-nav {
                 padding-top: .5rem;
+                align-items: flex-start;
             }
 
-            /* Login e logout ficam abaixo dos outros menus */
+            /* Login, cadastro e logout ficam abaixo dos menus */
             .nav-auth-item {
-                margin-left: 0;
+                margin-left: 0 !important;
             }
         }
 
         @media (max-width: 575.98px) {
+
             .topbar {
                 padding: 0 .75rem;
             }
@@ -211,10 +237,6 @@ if (session_status() === PHP_SESSION_NONE) {
             }
         }
     </style>
-
-    <link rel="stylesheet" href="<?php echo BASEURL; ?>css/style.css">
-    <link rel="stylesheet" href="<?php echo BASEURL; ?>css/awesome/all.min.css">
-
 </head>
 
 <body>
@@ -290,8 +312,7 @@ if (session_status() === PHP_SESSION_NONE) {
                         </ul>
 
                     </li>
-
-                    <!-- PRODUTOS -->
+                    <!-- ENFERMEIROS -->
                     <li class="nav-item dropdown">
 
                         <a class="nav-link dropdown-toggle clientes-toggle"
@@ -333,7 +354,7 @@ if (session_status() === PHP_SESSION_NONE) {
                     <!-- USUÁRIOS E AUTENTICAÇÃO -->
                     <?php if (isset($_SESSION['user'])) : ?>
 
-                        <?php if ($_SESSION['user'] == "admin") : ?>
+                        <?php if (is_admin()) : ?>
 
                             <!-- USUÁRIOS -->
                             <li class="nav-item dropdown">
@@ -377,12 +398,10 @@ if (session_status() === PHP_SESSION_NONE) {
                         <?php endif; ?>
 
                         <!-- LOGOUT -->
-                        <li class="nav-item nav-auth-item">
+                        <li class="nav-item nav-auth-item nav-auth-start">
 
                             <a class="nav-link nav-auth"
                                 href="<?php echo BASEURL; ?>inc/logout.php">
-
-                                Bem vindo <?php echo $_SESSION['user']; ?>!
 
                                 <i class="fa-solid fa-person-walking-arrow-right"></i>
                                 Desconectar
@@ -392,6 +411,19 @@ if (session_status() === PHP_SESSION_NONE) {
                         </li>
 
                     <?php else : ?>
+
+                        <!-- CADASTRAR -->
+                        <li class="nav-item nav-auth-item nav-auth-start">
+
+                            <a class="nav-link nav-auth"
+                                href="<?php echo BASEURL; ?>usuarios/cadastro.php">
+
+                                <i class="fa-solid fa-user"></i>
+                                Cadastrar
+
+                            </a>
+
+                        </li>
 
                         <!-- LOGIN -->
                         <li class="nav-item nav-auth-item">

@@ -1,3 +1,10 @@
+<?php
+// Modal de exclusão genérico. Antes do include, defina (opcional):
+//   $modal_titulo = 'Excluir Enfermeiro';
+//   $modal_texto  = 'Deseja realmente excluir este enfermeiro?';
+$modal_titulo = $modal_titulo ?? 'Excluir registro';
+$modal_texto  = $modal_texto  ?? 'Deseja realmente excluir este registro?';
+?>
 <!-- Estilos do modal -->
 <style>
     .modal-backdrop {
@@ -89,12 +96,12 @@
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h4 class="titulo-modal" id="modalLabel">Excluir Enfermeiro</h4>
+                <h4 class="titulo-modal" id="modalLabel"><?php echo e($modal_titulo); ?></h4>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <span class="modal-icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
-                <p class="mb-0">Deseja realmente excluir este Enfermeiro?</p>
+                <p class="mb-0"><?php echo e($modal_texto); ?></p>
             </div>
             <div class="modal-footer">
                 <a id="confirm" class="btn btn-crud-danger" href="#">
@@ -107,3 +114,14 @@
         </div>
     </div>
 </div> <!-- /.modal -->
+
+<script>
+    // Monta o link de exclusão (com token CSRF). O botão da tabela usa data-id.
+    document.getElementById('delete-modal').addEventListener('show.bs.modal', function (event) {
+        var g = event.relatedTarget;
+        var id = g ? (g.getAttribute('data-id') || g.getAttribute('data-usuario')) : null;
+        document.getElementById('confirm').href = id
+            ? 'delete.php?id=' + encodeURIComponent(id) + '&token=<?php echo e(csrf_token()); ?>'
+            : '#';
+    });
+</script>

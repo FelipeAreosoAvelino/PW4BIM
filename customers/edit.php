@@ -1,54 +1,53 @@
-
 <?php
-include "function.php";
+require_once("function.php");
 edit();
 include HEADER_TEMPLATE;
 ?>
 
 <h1 style="text-align: center;" class="titulo-modal">Atualizar Cliente</h1>
 
-<?php if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_SESSION['message'])): ?>
-    <div class="alert alert-<?php echo $_SESSION['type']; ?>" role="alert">
-        <?php echo $_SESSION['message']; ?>
+<?php if (!empty($_SESSION['message'])): ?>
+    <div class="alert alert-<?php echo e($_SESSION['type'] ?? 'info'); ?>" role="alert">
+        <?php echo e($_SESSION['message']); ?>
     </div>
-    <?php unset($_SESSION['message'], $_SESSION['type']); ?>
+    <?php clear_messages(); ?>
 <?php endif; ?>
 
 <div class="form-scroll">
-    <form action="edit.php?id=<?= $customer['id']; ?>" method="post" enctype="multipart/form-data" class="form-card">
+    <form action="edit.php?id=<?php echo (int) $customer['id']; ?>" method="post" enctype="multipart/form-data" class="form-card">
 
         <div class="form-group">
             <label for="name">Nome completo</label>
             <input type="text" class="form-control" id="name"
-                name="customer['name']" required
+                name="customer[nome]" required
                 minlength="3" maxlength="100"
-                value="<?php echo htmlspecialchars($customer['nome']); ?>">
+                value="<?php echo e($customer['nome']); ?>">
         </div>
 
         <div class="form-group">
             <label for="cep">CEP</label>
             <input type="text" class="form-control" id="cep"
-                name="customer['cep']" required
+                name="customer[cep]" required
                 inputmode="numeric" minlength="9" maxlength="9"
                 pattern="\d{5}-\d{3}"
                 title="Informe o CEP completo, com 8 números (ex: 12345-678)"
-                value="<?php echo htmlspecialchars($customer['cep']); ?>">
+                value="<?php echo e($customer['cep']); ?>">
         </div>
 
         <div class="form-group">
             <label for="phone">Telefone</label>
             <input type="text" class="form-control" id="phone"
-                name="customer['phone']" required
+                name="customer[phone]" required
                 inputmode="tel" minlength="14" maxlength="15"
                 pattern="\(\d{2}\) \d{4,5}-\d{4}"
                 title="Informe o telefone com DDD, com 10 ou 11 números"
-                value="<?php echo htmlspecialchars($customer['phone']); ?>">
+                value="<?php echo e($customer['phone']); ?>">
         </div>
 
         <div class="form-group">
             <label for="birthdate">Data de Nascimento</label>
             <input type="date" class="form-control" id="birthdate"
-                name="customer['birthdate']" required
+                name="customer[birthdate]" required
                 min="1900-01-01"
                 max="<?php echo date('Y-m-d'); ?>"
                 value="<?php
@@ -75,7 +74,7 @@ include HEADER_TEMPLATE;
             <label>Foto Atual</label>
             <div class="photo-preview" id="foto-preview">
                 <?php if (!empty($customer['foto'])): ?>
-                    <img src="<?php echo IMG_URL . $customer['foto']; ?>" alt="Foto atual">
+                    <img src="<?php echo e(IMG_URL . $customer['foto']); ?>" alt="Foto atual">
                 <?php else: ?>
                     <i class="fa-regular fa-image"></i>
                     <span>Sem Imagem</span>

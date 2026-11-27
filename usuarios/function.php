@@ -1,4 +1,3 @@
-
 <?php
 
 require_once('../config.php');
@@ -8,35 +7,11 @@ $usuario = null;
 $usuarios = null;
 
 /**
- * Filtragem de registros
+ * Tamanho de texto em caracteres (funciona mesmo sem a extensão mbstring).
  */
-function filter($table, $where)
+function str_len($texto)
 {
-    global $connection;
-
-    $database = open_database();
-
-    $found = null;
-
-    try {
-        $sql = "SELECT * FROM " . $table . " WHERE " . $where;
-
-        $result = $database->query($sql);
-
-        if ($result) {
-            $found = $result->fetch_all(MYSQLI_ASSOC);
-        }
-
-    } catch (Exception $e) {
-        $_SESSION['message'] = "Erro ao filtrar registros: "
-            . $e->getMessage();
-
-        $_SESSION['type'] = "danger";
-    }
-
-    close_database($database);
-
-    return $found;
+    return function_exists('mb_strlen') ? mb_strlen($texto, 'UTF-8') : (int) preg_match_all('/./us', $texto);
 }
 
 /**
@@ -44,73 +19,75 @@ function filter($table, $where)
  */
 function formatadata($data, $formato)
 {
-    $dt = new DateTime(
-        $data,
-        new DateTimeZone("America/Sao_Paulo")
-    );
-
+    $dt = new DateTime($data, new DateTimeZone("America/Sao_Paulo"));
     return $dt->format($formato);
 }
 
-function clear_messages() {
-    $_SESSION['message'] = null;
-    $_SESSION['type'] = null;
-}
-
 /**
- * Formatação de telefones
- */
-function telefone($tel)
-{
-    $tel = preg_replace('/\D/', '', $tel);
-
-    if (strlen($tel) == 11) {
-        return "(" . substr($tel, 0, 2) . ") "
-            . substr($tel, 2, 5) . "-"
-            . substr($tel, 7, 4);
-    }
-
-    if (strlen($tel) == 10) {
-        return "(" . substr($tel, 0, 2) . ") "
-            . substr($tel, 2, 4) . "-"
-            . substr($tel, 6, 4);
-    }
-
-    return $tel;
-}
-
-/**
- * Formatação de CEP
- */
-function cep($cep)
-{
-    $cep = preg_replace('/\D/', '', $cep);
-
-    if (strlen($cep) == 8) {
-        return substr($cep, 0, 5) . "-"
-            . substr($cep, 5, 3);
-    }
-
-    return $cep;
-}
-
-/**
- * Listagem de Usuários
+ * Listagem de Usuários (com pesquisa opcional por nome)
  */
 function index()
 {
     global $usuarios;
 
-    if (!empty($_POST['users'])) {
-        $pesquisa = addslashes($_POST['users']);
+    $pesquisa = trim($_POST['users'] ?? '');
 
-        $usuarios = filter(
-            "usuarios",
-            "nome like '%" . $pesquisa . "%'"
-        );
+    if ($pesquisa !== '') {
+        $usuarios = search("usuarios", "nome", $pesquisa);
     } else {
         $usuarios = find_all("usuarios");
     }
+}
+
+/**
+ * Valida e monta os dados do usuário a partir do formulário.
+ * Só os campos permitidos são aceitos (impede mandar "nivel" arbitrário).
+ * Lança Exception se algo estiver inválido.
+ */
+function dados_usuario($post, $senha_obrigatoria)
+{
+    $usuario = [];
+
+    $usuario['nome'] = trim($post['nome'] ?? '');
+    $usuario['user'] = trim($post['user'] ?? '');
+    $senha = (string) ($post['password'] ?? '');
+
+    if (str_len($usuario['nome']) < 3 || str_len($usuario['nome']) > 255) {
+        throw new Exception("Informe o nome (mínimo 3 caracteres).");
+    }
+
+    if (!preg_match('/^[A-Za-z0-9_.@-]{3,50}$/', $usuario['user'])) {
+        throw new Exception("O usuário deve ter de 3 a 50 caracteres (letras, números, _ . @ -).");
+    }
+
+    $nivel = $post['nivel'] ?? 'user';
+    $usuario['nivel'] = in_array($nivel, ['user', 'admin'], true) ? $nivel : 'user';
+
+    if ($senha !== '') {
+        if (strlen($senha) < 6) {
+            throw new Exception("A senha deve ter no mínimo 6 caracteres.");
+        }
+        $usuario['password'] = criptografia($senha);
+    } elseif ($senha_obrigatoria) {
+        throw new Exception("Informe a senha.");
+    }
+
+    return $usuario;
+}
+
+/**
+ * Verifica se já existe outro usuário com o mesmo login.
+ */
+function login_em_uso($login, $ignorar_id = 0)
+{
+    $lista = find_all("usuarios") ?: [];
+
+    foreach ($lista as $u) {
+        if (strcasecmp($u['user'], $login) === 0 && (int) $u['id'] !== (int) $ignorar_id) {
+            return true;
+        }
+    }
+    return false;
 }
 
 /**
@@ -119,79 +96,108 @@ function index()
  * Retorna o nome do arquivo armazenado.
  * Lança uma Exception caso alguma validação falhe.
  */
-function upload(
-    $pasta_destino,
-    $arquivo_destino,
-    $tipo_arquivo,
-    $nome_temp,
-    $tamanho_arquivo
-) {
-    // Verifica se o arquivo veio de um upload do PHP
+
+function upload($pasta_destino, $nome_temp, $tamanho_arquivo)
+{
     if (!is_uploaded_file($nome_temp)) {
         throw new Exception("O arquivo não foi enviado corretamente.");
     }
 
-    // Verifica o tamanho do arquivo
-    if ($tamanho_arquivo <= 0 || $tamanho_arquivo > 5000000) {
+    if ($tamanho_arquivo <= 0 || $tamanho_arquivo > 5 * 1024 * 1024) {
         throw new Exception("O arquivo deve ter no máximo 5 MB.");
     }
 
-    // Extensões e MIME permitidos
+    // Extensões permitidas de acordo com o tipo real da imagem
     $formatos = [
-        'jpg'  => 'image/jpeg',
-        'jpeg' => 'image/jpeg',
-        'png'  => 'image/png',
-        'gif'  => 'image/gif'
+        'image/jpeg' => 'jpg',
+        'image/png'  => 'png',
+        'image/gif'  => 'gif',
+        'image/webp' => 'webp',
     ];
 
-    $tipo_arquivo = strtolower($tipo_arquivo);
-
-    // Verifica se a extensão é permitida
-    if (!isset($formatos[$tipo_arquivo])) {
-        throw new Exception("Formato de arquivo não permitido.");
-    }
-
-    // Identifica o MIME real do arquivo
     $finfo = new finfo(FILEINFO_MIME_TYPE);
     $mime = $finfo->file($nome_temp);
 
-    // Verifica se o MIME corresponde à extensão
-    if ($mime !== $formatos[$tipo_arquivo]) {
-        throw new Exception(
-            "O arquivo não corresponde ao formato informado."
-        );
+    if (!isset($formatos[$mime])) {
+        throw new Exception("Formato não permitido. Use JPG, PNG, WEBP ou GIF.");
     }
 
-    // Verifica se o arquivo é uma imagem válida
-    if (getimagesize($nome_temp) === false) {
+    if (@getimagesize($nome_temp) === false) {
         throw new Exception("O arquivo não é uma imagem válida.");
     }
 
-    // Verifica se a pasta de destino existe
+    // Cria a pasta caso ainda não exista
     if (!is_dir($pasta_destino)) {
-        throw new Exception("A pasta de destino não existe.");
+        if (!mkdir($pasta_destino, 0755, true) && !is_dir($pasta_destino)) {
+            throw new Exception("Não foi possível criar a pasta de imagens.");
+        }
     }
 
-    // Verifica se a pasta possui permissão de escrita
     if (!is_writable($pasta_destino)) {
         throw new Exception("A pasta de destino não possui permissão de escrita.");
     }
 
-    // Gera um nome único para o arquivo
-    $nomearquivo = bin2hex(random_bytes(16))
-        . "." . $tipo_arquivo;
+    $nomearquivo = bin2hex(random_bytes(16)) . "." . $formatos[$mime];
 
-    // Monta o caminho definitivo
     $arquivo_destino = rtrim($pasta_destino, "/\\")
         . DIRECTORY_SEPARATOR . $nomearquivo;
 
-    // Move o arquivo para a pasta definitiva
     if (!move_uploaded_file($nome_temp, $arquivo_destino)) {
         throw new Exception("Não foi possível armazenar o arquivo.");
     }
 
-    // Retorna o nome gerado
     return $nomearquivo;
+}
+
+
+/**
+ * Trata o campo <input name="foto">.
+ * Retorna o nome do arquivo salvo ou null se nada foi enviado.
+ */
+
+function receber_foto()
+{
+    if (!isset($_FILES['foto']) || $_FILES['foto']['error'] === UPLOAD_ERR_NO_FILE) {
+        return null;
+    }
+
+    switch ($_FILES['foto']['error']) {
+        case UPLOAD_ERR_OK:
+            break;
+
+        case UPLOAD_ERR_INI_SIZE:
+        case UPLOAD_ERR_FORM_SIZE:
+            throw new Exception("A imagem é maior que o tamanho permitido.");
+
+        default:
+            throw new Exception("Erro no envio da imagem.");
+    }
+
+    // Utiliza o mesmo diretório configurado para Enfermeiros
+    return upload(
+        IMG_DIR,
+        $_FILES['foto']['tmp_name'],
+        $_FILES['foto']['size']
+    );
+}
+
+
+/**
+ * Apaga uma foto da pasta fotos/ (ignora vazio e a imagem padrão).
+ */
+
+function apagar_foto($nome)
+{
+    if (empty($nome) || $nome === 'semimagem.jpg') {
+        return;
+    }
+
+    // Utiliza o mesmo diretório de armazenamento das imagens
+    $caminho = IMG_DIR . basename($nome);
+
+    if (is_file($caminho)) {
+        @unlink($caminho);
+    }
 }
 
 /**
@@ -199,78 +205,128 @@ function upload(
  */
 function add()
 {
-    if (!empty($_POST['usuario'])) {
+    global $usuario;
 
-        $arquivo_enviado = null;
+    if (empty($_POST['usuario'])) {
+        return;
+    }
 
-        try {
-            $usuario = $_POST['usuario'];
+    $nova_foto = null;
 
-            // Upload da foto
-            if (
-                isset($_FILES['foto']) &&
-                $_FILES['foto']['error'] !== UPLOAD_ERR_NO_FILE
-            ) {
+    try {
+        $usuario = dados_usuario($_POST['usuario'], true);
 
-                if ($_FILES['foto']['error'] !== UPLOAD_ERR_OK) {
-                    throw new Exception("Erro no envio da imagem.");
-                }
-
-                $pasta_destino = "fotos/";
-
-                $nome_temp = $_FILES['foto']['tmp_name'];
-                $tamanho_arquivo = $_FILES['foto']['size'];
-
-                $tipo_arquivo = strtolower(
-                    pathinfo(
-                        $_FILES['foto']['name'],
-                        PATHINFO_EXTENSION
-                    )
-                );
-
-                // Chama a função upload
-                $nomearquivo = upload(
-                    $pasta_destino,
-                    null,
-                    $tipo_arquivo,
-                    $nome_temp,
-                    $tamanho_arquivo
-                );
-
-                $usuario['foto'] = $nomearquivo;
-
-                // Guarda o caminho para possível limpeza em caso de erro
-                $arquivo_enviado = $pasta_destino . $nomearquivo;
-            }
-
-            // Criptografando a senha
-            if (!empty($usuario['password'])) {
-                $usuario['password'] = criptografia(
-                    $usuario['password']
-                );
-            }
-
-            // Salva o usuário
-            save("usuarios", $usuario);
-
-            header("Location: index.php");
-            exit;
-
-        } catch (Exception $e) {
-
-            // Remove o arquivo caso o cadastro tenha falhado
-            if (
-                $arquivo_enviado !== null &&
-                file_exists($arquivo_enviado)
-            ) {
-                unlink($arquivo_enviado);
-            }
-
-            $_SESSION['message'] = "Aconteceu um erro: "
-                . $e->getMessage();
-
-            $_SESSION['type'] = "danger";
+        if (login_em_uso($usuario['user'])) {
+            throw new Exception("Esse nome de usuário já está em uso.");
         }
+
+        $nova_foto = receber_foto();
+        $usuario['foto'] = $nova_foto ?? '';
+
+        if (!save("usuarios", $usuario)) {
+            throw new Exception("Não foi possível salvar o usuário.");
+        }
+
+        header("Location: index.php");
+        exit;
+
+    } catch (Exception $e) {
+        apagar_foto($nova_foto);
+
+        // Mantém o que foi digitado (nunca devolve a senha)
+        $usuario = [
+            'nome'  => $_POST['usuario']['nome'] ?? '',
+            'user'  => $_POST['usuario']['user'] ?? '',
+            'nivel' => $_POST['usuario']['nivel'] ?? 'user',
+        ];
+
+        flash("Aconteceu um erro: " . $e->getMessage(), "danger");
+    }
+}
+
+/**
+ * Cadastro público de usuários.
+ * Não exige autenticação e sempre cria contas com nível "user".
+ */
+function registrar_usuario()
+{
+    global $usuario;
+
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        return;
+    }
+
+    $entrada = $_POST['usuario'] ?? null;
+    $dadosEnviados = is_array($entrada) ? $entrada : [];
+    $nova_foto = null;
+
+    try {
+
+        if (!is_array($entrada)) {
+            throw new Exception("Dados do cadastro inválidos.");
+        }
+
+        // Proteção CSRF
+        if (!csrf_check($_POST['csrf'] ?? null)) {
+            throw new Exception("Sua sessão expirou. Atualize a página e tente novamente.");
+        }
+
+        // Impede o envio de valores em formatos inesperados
+        foreach (['nome', 'user', 'password'] as $campo) {
+            if (isset($entrada[$campo]) && !is_string($entrada[$campo])) {
+                throw new Exception("Os dados informados são inválidos.");
+            }
+        }
+
+        // Valida nome, login e senha
+        $dados = dados_usuario($entrada, true);
+
+        // Cadastro público nunca pode criar administradores
+        $dados['nivel'] = 'user';
+
+        // Verifica se o login já existe
+        if (login_em_uso($dados['user'])) {
+            throw new Exception("Esse nome de usuário já está em uso. Escolha outro.");
+        }
+
+        // Recebe a foto, caso tenha sido enviada
+        $nova_foto = receber_foto();
+        $dados['foto'] = $nova_foto ?? '';
+
+        // Salva no banco
+        if (!save("usuarios", $dados)) {
+            throw new Exception("Não foi possível salvar seu cadastro.");
+        }
+
+        // Mensagem de sucesso para a tela de login
+        flash(
+            "Cadastro realizado com sucesso! Agora você já pode entrar na sua conta.",
+            "success"
+        );
+
+        header("Location: " . BASEURL . "inc/login.php");
+        exit;
+
+    } catch (Exception $e) {
+
+        // Remove a foto caso o cadastro não tenha sido concluído
+        apagar_foto($nova_foto);
+
+        // Mantém os campos preenchidos, exceto a senha
+        $usuario = [
+            'nome' => is_string($dadosEnviados['nome'] ?? null)
+                ? trim($dadosEnviados['nome']) : '',
+
+            'user' => is_string($dadosEnviados['user'] ?? null)
+                ? trim($dadosEnviados['user']) : '',
+
+            'nivel' => 'user'
+        ];
+
+        flash(
+            "Não foi possível realizar o cadastro: " . $e->getMessage(),
+            "danger"
+        );
     }
 }
 
@@ -279,96 +335,76 @@ function add()
  */
 function edit()
 {
-    if (isset($_GET['id'])) {
+    global $usuario;
 
-        $id = $_GET['id'];
-
-        if (isset($_POST['usuario'])) {
-
-            $arquivo_enviado = null;
-
-            try {
-                $usuario = $_POST['usuario'];
-
-                // Senha: criptografa somente se foi preenchida
-                if (!empty($usuario['password'])) {
-                    $usuario['password'] = criptografia(
-                        $usuario['password']
-                    );
-                } else {
-                    // Não altera a senha atual se o campo estiver vazio
-                    unset($usuario['password']);
-                }
-
-                // Upload de uma nova foto
-                if (
-                    isset($_FILES['foto']) &&
-                    $_FILES['foto']['error'] !== UPLOAD_ERR_NO_FILE
-                ) {
-
-                    if ($_FILES['foto']['error'] !== UPLOAD_ERR_OK) {
-                        throw new Exception("Erro no envio da imagem.");
-                    }
-
-                    $pasta_destino = "fotos/";
-
-                    $nome_temp = $_FILES['foto']['tmp_name'];
-                    $tamanho_arquivo = $_FILES['foto']['size'];
-
-                    $tipo_arquivo = strtolower(
-                        pathinfo(
-                            $_FILES['foto']['name'],
-                            PATHINFO_EXTENSION
-                        )
-                    );
-
-                    // Chama a função upload
-                    $nomearquivo = upload(
-                        $pasta_destino,
-                        null,
-                        $tipo_arquivo,
-                        $nome_temp,
-                        $tamanho_arquivo
-                    );
-
-                    $usuario['foto'] = $nomearquivo;
-
-                    // Guarda o caminho para possível limpeza em caso de erro
-                    $arquivo_enviado = $pasta_destino . $nomearquivo;
-                }
-
-                // Atualiza o usuário
-                update("usuarios", $id, $usuario);
-
-                header("Location: index.php");
-                exit;
-
-            } catch (Exception $e) {
-
-                // Remove a nova foto caso a atualização falhe
-                if (
-                    $arquivo_enviado !== null &&
-                    file_exists($arquivo_enviado)
-                ) {
-                    unlink($arquivo_enviado);
-                }
-
-                $_SESSION['message'] = "Aconteceu um erro: "
-                    . $e->getMessage();
-
-                $_SESSION['type'] = "danger";
-            }
-
-        } else {
-
-            // Carrega o usuário para edição
-            global $usuario;
-            $usuario = find("usuarios", $id);
-        }
-
-    } else {
+    if (!isset($_GET['id']) || (int) $_GET['id'] <= 0) {
         header("Location: index.php");
         exit;
+    }
+
+    $id = (int) $_GET['id'];
+    $atual = find("usuarios", $id);
+
+    if (!$atual) {
+        flash("Usuário não encontrado.", "danger");
+        header("Location: index.php");
+        exit;
+    }
+
+    $usuario = $atual;
+
+    if (empty($_POST['usuario'])) {
+        return;
+    }
+
+    $nova_foto = null;
+
+    try {
+        $dados = dados_usuario($_POST['usuario'], false);
+
+        if (login_em_uso($dados['user'], $id)) {
+            throw new Exception("Esse nome de usuário já está em uso.");
+        }
+
+        // Admin não pode tirar o próprio acesso de administrador
+        if ($id === (int) ($_SESSION['id'] ?? 0)) {
+            $dados['nivel'] = $atual['nivel'];
+        }
+
+        $nova_foto = receber_foto();
+        if ($nova_foto !== null) {
+            $dados['foto'] = $nova_foto;
+        }
+
+        if (!update("usuarios", $id, $dados)) {
+            throw new Exception("Não foi possível atualizar o usuário.");
+        }
+
+        // Só apaga a foto antiga depois que o banco foi atualizado
+        if ($nova_foto !== null) {
+            apagar_foto($atual['foto']);
+        }
+
+        // Mantém o nome exibido no menu atualizado
+        if ($id === (int) ($_SESSION['id'] ?? 0)) {
+            $_SESSION['nome'] = $dados['nome'];
+            $_SESSION['user'] = $dados['user'];
+            $_SESSION['nivel'] = $dados['nivel'];
+        }
+
+        header("Location: index.php");
+        exit;
+
+    } catch (Exception $e) {
+        apagar_foto($nova_foto);
+
+        // Mostra o que foi digitado, sem perder o id e a foto atuais
+        $usuario = array_merge($atual, [
+            'nome' => $_POST['usuario']['nome'] ?? $atual['nome'],
+            'user' => $_POST['usuario']['user'] ?? $atual['user'],
+        ]);
+
+        flash("Aconteceu um erro: " . $e->getMessage(), "danger");
     }
 }
 
@@ -379,18 +415,25 @@ function view($id = null)
 {
     global $usuario;
 
-    $usuario = find("usuarios", $id);
+    $usuario = find("usuarios", (int) $id);
 }
 
 /**
- * Exclusão de um Usuário
+ * Exclusão de um Usuário  e a foto dele)
  */
 function delete($id = null)
 {
-    remove("usuarios", $id);
+    $id = (int) $id;
+    $usuario = find("usuarios", $id);
+
+    if (!$usuario) {
+        flash("Usuário não encontrado.", "danger");
+    } elseif ($id === (int) ($_SESSION['id'] ?? 0)) {
+        flash("Você não pode excluir o seu próprio usuário.", "danger");
+    } elseif (remove("usuarios", $id)) {
+        apagar_foto($usuario['foto']);
+    }
 
     header("Location: index.php");
     exit;
 }
-
-?>

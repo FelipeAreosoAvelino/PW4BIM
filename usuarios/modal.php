@@ -89,12 +89,12 @@
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h4 class="titulo-modal" id="modalLabel">Excluir Enfermeiro</h4>
+                <h4 class="titulo-modal" id="modalLabel">Excluir Usuário</h4>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <span class="modal-icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
-                <p class="mb-0">Deseja realmente excluir este Enfermeiro?</p>
+                <p class="mb-0">Deseja realmente excluir este usuário?</p>
             </div>
             <div class="modal-footer">
                 <a id="confirm" class="btn btn-crud-danger" href="#">
@@ -107,3 +107,15 @@
         </div>
     </div>
 </div> <!-- /.modal -->
+
+<script>
+    // Monta o link de exclusão (com token CSRF) quando o modal abre
+    document.getElementById('delete-modal').addEventListener('show.bs.modal', function (event) {
+        var gatilho = event.relatedTarget;
+        var id = gatilho ? gatilho.getAttribute('data-usuario') : null;
+        var confirmar = document.getElementById('confirm');
+        confirmar.href = id
+            ? 'delete.php?id=' + encodeURIComponent(id) + '&token=<?php echo e(csrf_token()); ?>'
+            : '#';
+    });
+</script>

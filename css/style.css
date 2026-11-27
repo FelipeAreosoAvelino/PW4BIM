@@ -2,23 +2,25 @@
 
 /* Variaveis de cores e tokens usados em todo o sistema */
 :root {
-    --teal:       #0d7377;
+    --teal: #0d7377;
     --teal-light: #14a085;
-    --teal-dim:   #e6f4f4;
-    --slate:      #1e293b;
-    --muted:      #64748b;
-    --border:     #e2e8f0;
-    --surface:    #f8fafc;
-    --white:      #ffffff;
-    --red:        #e53e3e;
-    --red-dim:    #fde8e8;
-    --amber:      #d97706;
-    --amber-dim:  #fef3e2;
-    --green:      #16a34a;
-    --green-dim:  #dcfce7;
+    --teal-dim: #e6f4f4;
+    --slate: #1e293b;
+    --muted: #64748b;
+    --border: #e2e8f0;
+    --surface: #f8fafc;
+    --white: #ffffff;
+    --red: #e53e3e;
+    --red-dim: #fde8e8;
+    --amber: #d97706;
+    --amber-dim: #fef3e2;
+    --green: #16a34a;
+    --green-dim: #dcfce7;
 }
 
-* { box-sizing: border-box; }
+* {
+    box-sizing: border-box;
+}
 
 body {
     background: var(--surface);
@@ -29,6 +31,107 @@ body {
     overflow-x: hidden;
     display: flex;
     flex-direction: column;
+}
+
+/* Fotos de usuários na tabela */
+.user-photo {
+    width: 75px;
+    height: 75px;
+    border-radius: 50% !important;
+    object-fit: cover;
+    object-position: center;
+    border: 2px solid var(--teal-light);
+    display: block;
+}
+
+
+/* Resoluções médias: evita proximidade excessiva com a navbar */
+@media (min-width: 768px) and (max-width: 1100px) {
+    header {
+        margin-top: 1.5rem;
+    }
+}
+
+/* Tablets e telas menores */
+@media (max-width: 767.98px) {
+    header {
+        margin-top: 1rem;
+    }
+
+    header .col-sm-6 {
+        width: 100%;
+    }
+
+    .search-bar {
+        width: 100%;
+        max-width: none;
+        flex-wrap: nowrap;
+    }
+
+    .search-bar .form-control {
+        flex: 1;
+        min-width: 0;
+    }
+
+    header .col-sm-6:last-child {
+        justify-content: flex-start !important;
+        align-items: center !important;
+        margin-top: 1rem;
+        flex-wrap: wrap;
+        gap: .75rem !important;
+    }
+}
+
+/* Celulares */
+@media (max-width: 575.98px) {
+    .search-bar {
+        gap: .4rem;
+    }
+
+    .search-bar .btn {
+        width: 38px;
+        min-width: 38px;
+        height: 38px;
+        padding: .35rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Esconde o texto, mantendo a lupa visível */
+    .search-bar .btn-crud-primary {
+        font-size: .95rem;
+        white-space: nowrap;
+    }
+
+    .search-bar .btn-crud-primary span {
+        display: none;
+    }
+
+    .search-bar .btn-crud-primary i {
+        display: inline-block;
+        font-size: .95rem;
+        visibility: visible;
+        opacity: 1;
+        margin: 0;
+    }
+
+    /* Esconde o botão Limpar apenas na barra de pesquisa */
+    .search-bar .btn-crud-secondary {
+        display: none;
+    }
+
+    header .col-sm-6:last-child {
+        gap: .5rem !important;
+    }
+
+    header .col-sm-6:last-child .btn {
+        flex: 1 1 0;
+        justify-content: center;
+        font-size: .82rem;
+        padding: .45rem .5rem;
+        white-space: nowrap;
+    }
 }
 
 main.container {
@@ -215,6 +318,8 @@ hr {
     color: var(--muted);
 }
 
+
+
 #actions {
     margin-top: .5rem;
     padding-top: 1.25rem;
@@ -229,7 +334,7 @@ hr {
 }
 
 @media (max-width: 767.98px) {
-    .form-scroll > form {
+    .form-scroll>form {
         min-width: 760px;
     }
 }

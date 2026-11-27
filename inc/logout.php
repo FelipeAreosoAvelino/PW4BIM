@@ -1,13 +1,17 @@
 <?php
-    // Esse é o logout.php
-    include ("../config.php");
-    try {
-        session_start(); // Inicia a sessão ou acessa a sessão existente
-        session_destroy(); // Destrói a sessão limpando todos os valores salvos
-        // Direciona para o index do site
-        header("Location: " . BASEURL ."index.php");
-    } catch (Exception $e) {
-        $_SESSION['message'] = "Ocorreu um erro: " . $e->GetMessage();
-        $_SESSION['type'] = "danger";
-    }
-?>
+// Esse é o logout.php
+require_once("../config.php");
+require_once(DBAPI); // carrega a sessão (auth.php)
+
+// Limpa os dados e o cookie da sessão
+$_SESSION = [];
+
+if (ini_get("session.use_cookies")) {
+    $p = session_get_cookie_params();
+    setcookie(session_name(), '', time() - 42000, $p['path'], $p['domain'], $p['secure'], $p['httponly']);
+}
+
+session_destroy();
+
+header("Location: " . BASEURL . "index.php");
+exit;

@@ -27,7 +27,7 @@ try {
         </a>
 
 
-        <a href="enfermeiros/add.php" class="action-card">
+        <a href="customers/add.php" class="action-card">
             <div class="row">
                 <div class="col-xs-12 text-center">
                     <i class="fa fa-user-plus fa-5x"></i>

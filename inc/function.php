@@ -1,149 +1,221 @@
 <?php
-ob_start(); //output buffer aberto, para não dar erro de header location
+ob_start(); // output buffer aberto, para não dar erro de header location
 
-include('../config.php');
-include(DBAPI);
+require_once('../config.php');
+require_once(DBAPI);
 
 $customers = null;
 $customer = null;
 
 /**
- *  Formatar as datas
+ * Tamanho de texto em caracteres (funciona mesmo sem a extensão mbstring).
  */
+function str_len($texto)
+{
+    return function_exists('mb_strlen') ? mb_strlen($texto, 'UTF-8') : (int) preg_match_all('/./us', $texto);
+}
 
+/**
+ * Formatar as datas
+ */
 function formatData($data, $formato)
 {
-	$dt = new Datetime($data, new DateTimeZone("America/Sao_Paulo"));// "-0300"
-	return $dt->format($formato);
+    $dt = new DateTime($data, new DateTimeZone("America/Sao_Paulo"));
+    return $dt->format($formato);
 }
 
 /**
- *  Formatar os telefones
+ * Formatar os telefones (10 ou 11 dígitos)
  */
 function telefone($tel)
-{ //15999990000
-	return "(" . substr($tel, 0, 2) . ")" . substr($tel, 2, 5)
-		. "-" . substr($tel, 7, 4);
+{
+    $tel = preg_replace('/\D/', '', (string) $tel);
+
+    if (strlen($tel) == 11) {
+        return "(" . substr($tel, 0, 2) . ") " . substr($tel, 2, 5) . "-" . substr($tel, 7, 4);
+    }
+
+    if (strlen($tel) == 10) {
+        return "(" . substr($tel, 0, 2) . ") " . substr($tel, 2, 4) . "-" . substr($tel, 6, 4);
+    }
+
+    return $tel;
 }
 
 /**
- *  Formatar os cep´s
+ * Formatar os CEPs
  */
 function cep($cep)
 {
-	return substr($cep, 0, 5) . "-" . substr($cep, 5, 3);
+    $cep = preg_replace('/\D/', '', (string) $cep);
+
+    if (strlen($cep) == 8) {
+        return substr($cep, 0, 5) . "-" . substr($cep, 5, 3);
+    }
+
+    return $cep;
 }
 
 /**
- *  Listagem de Clientes
+ * Pega do formulário só os campos permitidos e valida.
+ * Lança Exception se algo estiver inválido.
+ */
+function dados_cliente($post)
+{
+    $c = [];
+    $c['nome'] = trim($post['nome'] ?? '');
+    $c['birthdate'] = trim($post['birthdate'] ?? '');
+    $c['cep'] = preg_replace('/\D/', '', (string) ($post['cep'] ?? ''));
+    $c['phone'] = preg_replace('/\D/', '', (string) ($post['phone'] ?? ''));
+
+    if (str_len($c['nome']) < 3 || str_len($c['nome']) > 255) {
+        throw new Exception("Informe o nome (mínimo 3 caracteres).");
+    }
+
+    $d = DateTime::createFromFormat('Y-m-d', $c['birthdate']);
+    if (!$d || $d->format('Y-m-d') !== $c['birthdate'] || $d > new DateTime('today')) {
+        throw new Exception("Data de nascimento inválida.");
+    }
+
+    if (strlen($c['cep']) !== 8) {
+        throw new Exception("CEP inválido.");
+    }
+
+    if (!in_array(strlen($c['phone']), [10, 11], true)) {
+        throw new Exception("Telefone inválido.");
+    }
+
+    return $c;
+}
+
+/**
+ * Listagem de Clientes
  */
 function index()
 {
-	global $customers;
-	$customers = find_all("customers");
-	//find_all e find é a mesma coisa, resulta na mesma coisa
+    global $customers;
+    $customers = find_all("customers");
 }
 
 /**
- *  Visualização de um Cliente
+ * Visualização de um Cliente
  */
 function view($id = null)
 {
-	global $customer;
-	$customer = find('customers', $id);
+    global $customer;
+    $customer = find('customers', (int) $id);
 }
 
 /**
- *  Cadastro de Clientes
+ * Cadastro de Clientes
  */
 function add()
 {
-	if (!empty($_POST['customer'])) {
+    global $customer;
 
-		// $today = date_create('now', new DateTimeZone('-0300'));
-		$today = new DateTime('now', new DateTimeZone('America/Sao_Paulo'));
-
-		$customer = $_POST['customer'];
-		$customer['modified'] = $customer['created'] = $today->format("Y-m-d H:i:s");
-		//modified e created são posições que serão adiconadas dentro do array $customer
-
-		try {
-			$customer['foto'] = uploadFoto($_FILES['foto'] ?? null);
-		} catch (Exception $e) {
-			$_SESSION['message'] = $e->getMessage();
-			$_SESSION['type'] = 'danger';
-			return; // nao salva o cliente se a foto enviada for invalida
-		}
-
-		save('customers', $customer); // 'customers' -> nome da tabela; $customer -> associative array
-		header('location: index.php'); // output buffer
-	}
-}
-
-/**
- *	Atualizacao/Edicao de Cliente
- */
-function edit() {
-
-  $now = date_create('now', new DateTimeZone('America/Sao_Paulo'));
-
-  if (isset($_GET['id'])) {
-
-    $id = $_GET['id'];
-
-    if (isset($_POST['customer'])) {
-
-      global $customer;
-      $atual = find("customers", $id); // dados que ja estavam salvos, incluindo a foto antiga
-
-      $customer = $_POST['customer'];
-      $customer['modified'] = $now->format("Y-m-d H:i:s");
-
-      try {
-        $novaFoto = uploadFoto($_FILES['foto'] ?? null);
-      } catch (Exception $e) {
-        $_SESSION['message'] = $e->getMessage();
-        $_SESSION['type'] = 'danger';
-        $customer = $atual; // devolve os dados atuais pra tela nao ficar em branco
+    if (empty($_POST['customer'])) {
         return;
-      }
+    }
 
-      if ($novaFoto) {
-        deletarFoto($atual['foto'] ?? null); // so apaga a antiga se uma nova foi enviada
-        $customer['foto'] = $novaFoto;
-      } else {
-        $customer['foto'] = $atual['foto'] ?? null; // mantem a foto que ja existia
-      }
+    $nova_foto = null;
 
-      update("customers", $id, $customer);
-      header("location: index.php");
-    } else {
+    try {
+        $customer = dados_cliente($_POST['customer']);
+        $nova_foto = uploadFoto($_FILES['foto'] ?? null);
+        $customer['foto'] = $nova_foto ?? ''; // coluna foto é NOT NULL
 
-      global $customer;
-      $customer = find("customers", $id);
-    } 
-  } else {
-    header("location: index.php");
-  }
+        if (!save('customers', $customer)) {
+            throw new Exception("Não foi possível salvar o cliente.");
+        }
+
+        header('Location: index.php');
+        exit;
+
+    } catch (Exception $e) {
+        deletarFoto($nova_foto); // não deixa foto órfã
+        flash($e->getMessage(), 'danger');
+        $customer = $_POST['customer']; // mantém o que foi digitado
+    }
 }
 
 /**
- *  Exclusão de um Cliente
+ * Atualização/Edição de Cliente
  */
-function delete($id = null) {
+function edit()
+{
+    global $customer;
 
-  global $customer;
-  $customer = find('customers', $id); // busca os dados (inclusive a foto) antes de excluir
+    if (!isset($_GET['id']) || (int) $_GET['id'] <= 0) {
+        header("Location: index.php");
+        exit;
+    }
 
-  if ($customer) {
-    deletarFoto($customer['foto'] ?? null);
-  }
+    $id = (int) $_GET['id'];
+    $atual = find("customers", $id);
 
-  remove('customers', $id);
+    if (!$atual) {
+        flash("Cliente não encontrado.", "danger");
+        header("Location: index.php");
+        exit;
+    }
 
-  header("location: index.php");
+    $customer = $atual;
+
+    if (empty($_POST['customer'])) {
+        return;
+    }
+
+    $nova_foto = null;
+
+    try {
+        $dados = dados_cliente($_POST['customer']);
+        $nova_foto = uploadFoto($_FILES['foto'] ?? null);
+
+        if ($nova_foto) {
+            $dados['foto'] = $nova_foto; // sem foto nova, a coluna não é alterada
+        }
+
+        if (!update("customers", $id, $dados)) {
+            throw new Exception("Não foi possível atualizar o cliente.");
+        }
+
+        // Só apaga a foto antiga depois que o banco foi atualizado
+        if ($nova_foto) {
+            deletarFoto($atual['foto'] ?? null);
+        }
+
+        header("Location: index.php");
+        exit;
+
+    } catch (Exception $e) {
+        deletarFoto($nova_foto);
+        flash($e->getMessage(), 'danger');
+        $customer = array_merge($atual, $_POST['customer']); // mantém o digitado
+    }
 }
-function redimensionarImagem($origem, $destino, $larguraMax = 300) {
+
+/**
+ * Exclusão de um Cliente
+ */
+function delete($id = null)
+{
+    $id = (int) $id;
+    $cliente = find('customers', $id);
+
+    // Remove primeiro o registro; a foto só é apagada se isso deu certo
+    if ($cliente && remove('customers', $id)) {
+        deletarFoto($cliente['foto'] ?? null);
+    }
+
+    header("Location: index.php");
+    exit;
+}
+
+/**
+ * Redimensiona a imagem para no máximo $larguraMax de largura.
+ */
+function redimensionarImagem($origem, $destino, $larguraMax = 300)
+{
     $info = getimagesize($origem);
     if (!$info) {
         throw new Exception("Não foi possível ler a imagem.");
@@ -153,107 +225,118 @@ function redimensionarImagem($origem, $destino, $larguraMax = 300) {
     $altura  = $info[1];
     $tipo    = $info[2];
 
+    // Evita imagens gigantes que estourariam a memória ao redimensionar
+    if ($largura * $altura > 25000000) {
+        throw new Exception("A imagem tem dimensões muito grandes.");
+    }
+
     // Se a imagem já for menor que o limite, só copia
     if ($largura <= $larguraMax) {
-        copy($origem, $destino);
+        if (!copy($origem, $destino)) {
+            throw new Exception("Não foi possível salvar a imagem.");
+        }
         return;
     }
 
-    $ratio    = $larguraMax / $largura;
-    $novaLarg = $larguraMax;
-    $novaAlt  = (int)($altura * $ratio);
+    switch ($tipo) {
+        case IMAGETYPE_JPEG: $src = imagecreatefromjpeg($origem); break;
+        case IMAGETYPE_PNG:  $src = imagecreatefrompng($origem);  break;
+        case IMAGETYPE_WEBP: $src = imagecreatefromwebp($origem); break;
+        case IMAGETYPE_GIF:  $src = imagecreatefromgif($origem);  break;
+        default:
+            throw new Exception("Formato de imagem não suportado. Use JPG, PNG, WEBP ou GIF.");
+    }
 
+    if (!$src) {
+        throw new Exception("Não foi possível processar a imagem.");
+    }
+
+    $novaLarg = $larguraMax;
+    $novaAlt  = max(1, (int) ($altura * ($larguraMax / $largura)));
     $nova = imagecreatetruecolor($novaLarg, $novaAlt);
 
-    if ($tipo === IMAGETYPE_JPEG) {
-        $src = imagecreatefromjpeg($origem);
-    } elseif ($tipo === IMAGETYPE_PNG) {
-        // Preserva transparência no PNG
+    // Preserva transparência (PNG, WEBP e GIF)
+    if ($tipo !== IMAGETYPE_JPEG) {
         imagealphablending($nova, false);
         imagesavealpha($nova, true);
-        $src = imagecreatefrompng($origem);
-    } elseif ($tipo === IMAGETYPE_WEBP) {
-        $src = imagecreatefromwebp($origem);
-    } elseif ($tipo === IMAGETYPE_GIF) {
-        $src = imagecreatefromgif($origem);
-    } else {
-        throw new Exception("Formato de imagem não suportado. Use JPG, PNG, WEBP ou GIF.");
+        imagefill($nova, 0, 0, imagecolorallocatealpha($nova, 0, 0, 0, 127));
     }
 
     imagecopyresampled($nova, $src, 0, 0, 0, 0, $novaLarg, $novaAlt, $largura, $altura);
 
-    if ($tipo === IMAGETYPE_JPEG) {
-        imagejpeg($nova, $destino, 85);
-    } elseif ($tipo === IMAGETYPE_PNG) {
-        imagepng($nova, $destino, 6);
-    } elseif ($tipo === IMAGETYPE_WEBP) {
-        imagewebp($nova, $destino, 85);
-    } elseif ($tipo === IMAGETYPE_GIF) {
-        imagegif($nova, $destino);
+    switch ($tipo) {
+        case IMAGETYPE_JPEG: $ok = imagejpeg($nova, $destino, 85); break;
+        case IMAGETYPE_PNG:  $ok = imagepng($nova, $destino, 6);   break;
+        case IMAGETYPE_WEBP: $ok = imagewebp($nova, $destino, 85); break;
+        case IMAGETYPE_GIF:  $ok = imagegif($nova, $destino);      break;
     }
 
-imagedestroy($src);
-    imagedestroy($nova);
+    if (empty($ok)) {
+        throw new Exception("Não foi possível salvar a imagem.");
+    }
 }
 
 /**
- *  Faz o upload de uma foto: valida, redimensiona e salva na pasta img/.
- *  Retorna o nome do arquivo salvo, ou null se nenhum arquivo foi enviado.
+ * Faz o upload de uma foto: valida, redimensiona e salva em IMG_DIR.
+ * Retorna o nome do arquivo salvo, ou null se nenhum arquivo foi enviado.
  */
 function uploadFoto($arquivo)
 {
-	// Nenhum arquivo enviado (ex: usuario nao trocou a foto na edicao)
-	if (empty($arquivo) || empty($arquivo['name']) || $arquivo['error'] === UPLOAD_ERR_NO_FILE) {
-		return null;
-	}
+    // Nenhum arquivo enviado (ex: usuário não trocou a foto na edição)
+    if (empty($arquivo) || ($arquivo['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+        return null;
+    }
 
-	if ($arquivo['error'] !== UPLOAD_ERR_OK) {
-		throw new Exception("Erro ao enviar a imagem.");
-	}
+    if ($arquivo['error'] === UPLOAD_ERR_INI_SIZE || $arquivo['error'] === UPLOAD_ERR_FORM_SIZE) {
+        throw new Exception("A imagem deve ter no máximo 5MB.");
+    }
 
-	if (!is_uploaded_file($arquivo['tmp_name'])) {
-		throw new Exception("Upload inválido.");
-	}
+    if ($arquivo['error'] !== UPLOAD_ERR_OK) {
+        throw new Exception("Erro ao enviar a imagem.");
+    }
 
-	$extensoesPermitidas = [
-		'image/jpeg' => 'jpg',
-		'image/png'  => 'png',
-		'image/webp' => 'webp',
-		'image/gif'  => 'gif',
-	];
+    if (!is_uploaded_file($arquivo['tmp_name'])) {
+        throw new Exception("Upload inválido.");
+    }
 
-	$tipo = mime_content_type($arquivo['tmp_name']);
-	if (!isset($extensoesPermitidas[$tipo])) {
-		throw new Exception("Formato de imagem não permitido. Use JPG, PNG, WEBP ou GIF.");
-	}
+    $extensoesPermitidas = [
+        'image/jpeg' => 'jpg',
+        'image/png'  => 'png',
+        'image/webp' => 'webp',
+        'image/gif'  => 'gif',
+    ];
 
-	$tamanhoMaximo = 5 * 1024 * 1024; // 5MB
-	if ($arquivo['size'] > $tamanhoMaximo) {
-		throw new Exception("A imagem deve ter no máximo 5MB.");
-	}
+    $tipo = mime_content_type($arquivo['tmp_name']);
+    if (!isset($extensoesPermitidas[$tipo])) {
+        throw new Exception("Formato de imagem não permitido. Use JPG, PNG, WEBP ou GIF.");
+    }
 
-	if (!is_dir(IMG_DIR)) {
-		mkdir(IMG_DIR, 0755, true);
-	}
+    if ($arquivo['size'] > 5 * 1024 * 1024) {
+        throw new Exception("A imagem deve ter no máximo 5MB.");
+    }
 
-	$nomeUnico = uniqid('foto_', true) . '.' . $extensoesPermitidas[$tipo];
-	redimensionarImagem($arquivo['tmp_name'], IMG_DIR . $nomeUnico, 300);
+    if (!is_dir(IMG_DIR) && !mkdir(IMG_DIR, 0755, true)) {
+        throw new Exception("Não foi possível criar a pasta de imagens.");
+    }
 
-	return $nomeUnico;
+    $nomeUnico = 'foto_' . bin2hex(random_bytes(12)) . '.' . $extensoesPermitidas[$tipo];
+    redimensionarImagem($arquivo['tmp_name'], IMG_DIR . $nomeUnico, 300);
+
+    return $nomeUnico;
 }
 
 /**
- *  Remove do disco a foto de um cliente, se existir.
+ * Remove do disco a foto de um cliente, se existir.
  */
 function deletarFoto($nomeArquivo)
 {
-	if (empty($nomeArquivo)) {
-		return;
-	}
+    if (empty($nomeArquivo)) {
+        return;
+    }
 
-	$caminho = IMG_DIR . $nomeArquivo;
+    $caminho = IMG_DIR . basename($nomeArquivo);
 
-	if (is_file($caminho)) {
-		unlink($caminho);
-	}
+    if (is_file($caminho)) {
+        @unlink($caminho);
+    }
 }
