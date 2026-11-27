@@ -65,8 +65,9 @@ $u = $usuario ?? [];
         <div class="form-group">
             <label for="birthdate">Data de Nascimento</label>
             <input type="date" class="form-control" id="birthdate"
-                name="usuarios[birthdate]" required
-                min="1900-01-01"
+                name="usuario[birthdate]"
+                required
+                min=" 1900-01-01"
                 max="<?php echo date('Y-m-d'); ?>"
                 value="<?php echo e($usuario['birthdate'] ?? ''); ?>">
         </div>
