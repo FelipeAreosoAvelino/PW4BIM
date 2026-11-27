@@ -64,6 +64,19 @@ $foto = !empty($usuario['foto']) ? $usuario['foto'] : "semimagem.jpg";
         </div>
 
         <div class="form-group">
+            <label for="birthdate">Data de Nascimento</label>
+            <input type="date" class="form-control" id="birthdate"
+                name="usuario[birthdate]" required
+                min="1900-01-01"
+                max="<?php echo date('Y-m-d'); ?>"
+                value="<?php
+                        echo !empty($usuario['birthdate'])
+                            ? date('Y-m-d', strtotime($usuario['birthdate']))
+                            : '';
+                        ?>">
+        </div>
+
+        <div class="form-group">
             <label for="nivel">Nível de acesso</label>
             <select
                 class="form-control"

@@ -17,7 +17,7 @@ function str_len($texto)
 /**
  * Formatação de datas
  */
-function formatadata($data, $formato)
+function formatdata($data, $formato)
 {
     $dt = new DateTime($data, new DateTimeZone("America/Sao_Paulo"));
     return $dt->format($formato);

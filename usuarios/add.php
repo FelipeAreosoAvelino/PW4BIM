@@ -1,4 +1,3 @@
-
 <?php
 require_once("function.php");
 require_admin();
@@ -64,6 +63,15 @@ $u = $usuario ?? [];
         </div>
 
         <div class="form-group">
+            <label for="birthdate">Data de Nascimento</label>
+            <input type="date" class="form-control" id="birthdate"
+                name="usuarios[birthdate]" required
+                min="1900-01-01"
+                max="<?php echo date('Y-m-d'); ?>"
+                value="<?php echo e($usuario['birthdate'] ?? ''); ?>">
+        </div>
+
+        <div class="form-group">
             <label for="nivel">Nível de acesso</label>
             <select class="form-control" id="nivel" name="usuario[nivel]">
                 <option value="user"
@@ -122,43 +130,43 @@ $u = $usuario ?? [];
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function() {
 
-    // ---- Pré-visualização da foto ----
-    var input = document.getElementById('foto');
-    var preview = document.getElementById('foto-preview');
-    var placeholder = preview.innerHTML;
+        // ---- Pré-visualização da foto ----
+        var input = document.getElementById('foto');
+        var preview = document.getElementById('foto-preview');
+        var placeholder = preview.innerHTML;
 
-    input.addEventListener('change', function() {
+        input.addEventListener('change', function() {
 
-        var file = input.files && input.files[0];
+            var file = input.files && input.files[0];
 
-        if (!file) {
-            preview.innerHTML = placeholder;
-            return;
-        }
+            if (!file) {
+                preview.innerHTML = placeholder;
+                return;
+            }
 
-        var reader = new FileReader();
+            var reader = new FileReader();
 
-        reader.onload = function(e) {
-            preview.innerHTML =
-                '<img src="' + e.target.result +
-                '" alt="Pré-visualização da foto">';
-        };
+            reader.onload = function(e) {
+                preview.innerHTML =
+                    '<img src="' + e.target.result +
+                    '" alt="Pré-visualização da foto">';
+            };
 
-        reader.readAsDataURL(file);
+            reader.readAsDataURL(file);
+        });
+
+        // ---- Limpar formulário ----
+        var form = input.closest('form');
+
+        form.addEventListener('reset', function() {
+            setTimeout(function() {
+                preview.innerHTML = placeholder;
+            }, 0);
+        });
+
     });
-
-    // ---- Limpar formulário ----
-    var form = input.closest('form');
-
-    form.addEventListener('reset', function() {
-        setTimeout(function() {
-            preview.innerHTML = placeholder;
-        }, 0);
-    });
-
-});
 </script>
 
 <?php include FOOTER_TEMPLATE; ?>
